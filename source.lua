@@ -6,6 +6,7 @@ local guiToggleKey = Enum.KeyCode.RightShift
 local espToggleKey = Enum.KeyCode.F1
 local aimbotToggleKey = Enum.KeyCode.F2
 local flyToggleKey = Enum.KeyCode.F3
+local fovToggleKey = Enum.KeyCode.F4
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -15,9 +16,18 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
 -- Variables
-local flyEnabled, noclipEnabled, aimbotEnabled, espEnabled = false, false, false, false
+local flyEnabled, noclipEnabled, aimbotEnabled, espEnabled, fovVisible = false, false, false, false, true
 local teleportToPlayer = nil
 local SelectedBodyPart = "Head"
+local fovRadius = 100
+local fovCircle = Drawing.new("Circle")
+fovCircle.Thickness = 2
+fovCircle.NumSides = 100
+fovCircle.Color = Color3.fromRGB(255, 255, 255)
+fovCircle.Filled = false
+fovCircle.Visible = fovVisible
+fovCircle.Radius = fovRadius
+fovCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
 
 -- GUI Setup
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
@@ -75,7 +85,7 @@ local function getClosestTarget()
         if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
             local pos, onScreen = Camera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
             local mag = (Vector2.new(pos.X, pos.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
-            if onScreen and mag < dist then
+            if onScreen and mag < dist and mag <= fovRadius then
                 dist = mag
                 closest = plr
             end
@@ -95,6 +105,9 @@ RunService.RenderStepped:Connect(function()
             Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character[SelectedBodyPart].Position)
         end
     end
+    fovCircle.Visible = fovVisible
+    fovCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+    fovCircle.Radius = fovRadius
 end)
 
 -- Fly Functionality
@@ -173,5 +186,8 @@ UserInputService.InputBegan:Connect(function(input, gpe)
         toggleAimbot()
     elseif input.KeyCode == flyToggleKey then
         toggleFly()
+    elseif input.KeyCode == fovToggleKey then
+        fovVisible = not fovVisible
+        fovCircle.Visible = fovVisible
     end
 end)
