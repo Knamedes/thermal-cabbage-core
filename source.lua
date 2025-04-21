@@ -18,13 +18,13 @@ local Camera = workspace.CurrentCamera
 -- Variables
 local flyEnabled, noclipEnabled, aimbotEnabled, espEnabled, selectedFOV = false, false, false, false, 70
 local teleportToPlayer = nil
-local SelectedBodyPart = "Head" -- Manual selection for Aimbot & ESP targeting
+local SelectedBodyPart = "Head"
 
 -- GUI Setup
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
 ScreenGui.Name = "utilitygui"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.DisplayOrder = 999 -- Ensure it's on top of all elements
+ScreenGui.DisplayOrder = 999
 
 local Frame = Instance.new("Frame", ScreenGui)
 Frame.Size = UDim2.new(0, 350, 0, 500)
@@ -113,14 +113,18 @@ local function toggleFly()
             if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - Camera.CFrame.LookVector end
             if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - Camera.CFrame.RightVector end
             if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + Camera.CFrame.RightVector end
-            bodyVel.Velocity = dir.Unit * 60
+            if dir.Magnitude > 0 then
+                bodyVel.Velocity = dir.Unit * 60
+            else
+                bodyVel.Velocity = Vector3.zero
+            end
         else
-            bodyVel:Destroy()
+            if bodyVel then bodyVel:Destroy() end
         end
     end)
 end
 
--- Teleport Functionality Update (Smooth Teleport)
+-- Teleport Functionality
 local function smoothTeleport(targetPlayer)
     if targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
         local info = TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
@@ -130,19 +134,44 @@ local function smoothTeleport(targetPlayer)
     end
 end
 
--- FOV Slider
-local SliderFrame = Instance.new("Slider", Frame)
-SliderFrame.Size = UDim2.new(1, -20, 0, 40)
-SliderFrame.Position = UDim2.new(0, 10, 0, 450)
-SliderFrame.BackgroundTransparency = 0.5
-SliderFrame.Text = "Adjust FOV"
+-- FOV Slider (Custom Implementation)
+local sliderBackground = Instance.new("Frame", Frame)
+sliderBackground.Size = UDim2.new(1, -20, 0, 20)
+sliderBackground.Position = UDim2.new(0, 10, 0, 450)
+sliderBackground.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
 
-local function adjustFOV(newFOV)
-    selectedFOV = newFOV
-    Camera.FieldOfView = selectedFOV
-end
+local sliderButton = Instance.new("TextButton", sliderBackground)
+sliderButton.Size = UDim2.new(0, 10, 1, 0)
+sliderButton.Position = UDim2.new(0, 0, 0, 0)
+sliderButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+sliderButton.Text = ""
 
-SliderFrame.Changed:Connect(adjustFOV)
+local dragging = false
+local maxFOV, minFOV = 120, 30
+
+sliderButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if dragging then
+        local mousePos = UserInputService:GetMouseLocation().X
+        local sliderX = sliderBackground.AbsolutePosition.X
+        local sliderW = sliderBackground.AbsoluteSize.X
+        local relative = math.clamp(mousePos - sliderX, 0, sliderW)
+        sliderButton.Position = UDim2.new(0, relative, 0, 0)
+        local newFOV = math.floor(minFOV + (relative / sliderW) * (maxFOV - minFOV))
+        Camera.FieldOfView = newFOV
+    end
+end)
 
 -- Input Handling
 UserInputService.InputBegan:Connect(function(input, gpe)
@@ -156,6 +185,6 @@ UserInputService.InputBegan:Connect(function(input, gpe)
     elseif input.KeyCode == flyToggleKey then
         toggleFly()
     elseif input.KeyCode == fovSliderKey then
-        Panel.Visible = not Panel.Visible -- Toggle FOV slider
+        sliderBackground.Visible = not sliderBackground.Visible
     end
 end)
