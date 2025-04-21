@@ -1,4 +1,4 @@
---// Enhanced ESP + Aimbot + GUI with Fly, Noclip, Teleport + Toggles + FOV Slider //--
+--// Enhanced ESP + Aimbot + GUI with Fly, Noclip, Teleport + Toggles //--
 -- Clean script, stealthy, no exploit-specific keywords
 
 -- Settings
@@ -6,7 +6,6 @@ local guiToggleKey = Enum.KeyCode.RightShift
 local espToggleKey = Enum.KeyCode.F1
 local aimbotToggleKey = Enum.KeyCode.F2
 local flyToggleKey = Enum.KeyCode.F3
-local fovSliderKey = Enum.KeyCode.F4
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -16,7 +15,7 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
 -- Variables
-local flyEnabled, noclipEnabled, aimbotEnabled, espEnabled, selectedFOV = false, false, false, false, 70
+local flyEnabled, noclipEnabled, aimbotEnabled, espEnabled = false, false, false, false
 local teleportToPlayer = nil
 local SelectedBodyPart = "Head"
 
@@ -113,18 +112,14 @@ local function toggleFly()
             if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - Camera.CFrame.LookVector end
             if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - Camera.CFrame.RightVector end
             if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + Camera.CFrame.RightVector end
-            if dir.Magnitude > 0 then
-                bodyVel.Velocity = dir.Unit * 60
-            else
-                bodyVel.Velocity = Vector3.zero
-            end
+            bodyVel.Velocity = dir.Magnitude > 0 and dir.Unit * 60 or Vector3.zero
         else
-            if bodyVel then bodyVel:Destroy() end
+            bodyVel:Destroy()
         end
     end)
 end
 
--- Teleport Functionality
+-- Smooth Teleport
 local function smoothTeleport(targetPlayer)
     if targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
         local info = TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
@@ -134,44 +129,38 @@ local function smoothTeleport(targetPlayer)
     end
 end
 
--- FOV Slider (Custom Implementation)
-local sliderBackground = Instance.new("Frame", Frame)
-sliderBackground.Size = UDim2.new(1, -20, 0, 20)
-sliderBackground.Position = UDim2.new(0, 10, 0, 450)
-sliderBackground.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+-- Player Teleport GUI
+local PlayerListFrame = Instance.new("ScrollingFrame", Frame)
+PlayerListFrame.Size = UDim2.new(1, -20, 0, 200)
+PlayerListFrame.Position = UDim2.new(0, 10, 0, 290)
+PlayerListFrame.BackgroundTransparency = 0.3
+PlayerListFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+PlayerListFrame.BorderSizePixel = 0
+PlayerListFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+PlayerListFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+PlayerListFrame.ScrollBarThickness = 6
 
-local sliderButton = Instance.new("TextButton", sliderBackground)
-sliderButton.Size = UDim2.new(0, 10, 1, 0)
-sliderButton.Position = UDim2.new(0, 0, 0, 0)
-sliderButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-sliderButton.Text = ""
-
-local dragging = false
-local maxFOV, minFOV = 120, 30
-
-sliderButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
+local function refreshPlayerList()
+    PlayerListFrame:ClearAllChildren()
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then
+            local btn = Instance.new("TextButton", PlayerListFrame)
+            btn.Size = UDim2.new(1, 0, 0, 30)
+            btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+            btn.TextColor3 = Color3.new(1, 1, 1)
+            btn.Font = Enum.Font.SourceSans
+            btn.TextSize = 18
+            btn.Text = "Teleport to: " .. plr.Name
+            btn.MouseButton1Click:Connect(function()
+                smoothTeleport(plr)
+            end)
+        end
     end
-end)
+end
 
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
-    end
-end)
-
-RunService.RenderStepped:Connect(function()
-    if dragging then
-        local mousePos = UserInputService:GetMouseLocation().X
-        local sliderX = sliderBackground.AbsolutePosition.X
-        local sliderW = sliderBackground.AbsoluteSize.X
-        local relative = math.clamp(mousePos - sliderX, 0, sliderW)
-        sliderButton.Position = UDim2.new(0, relative, 0, 0)
-        local newFOV = math.floor(minFOV + (relative / sliderW) * (maxFOV - minFOV))
-        Camera.FieldOfView = newFOV
-    end
-end)
+Players.PlayerAdded:Connect(refreshPlayerList)
+Players.PlayerRemoving:Connect(refreshPlayerList)
+refreshPlayerList()
 
 -- Input Handling
 UserInputService.InputBegan:Connect(function(input, gpe)
@@ -184,7 +173,5 @@ UserInputService.InputBegan:Connect(function(input, gpe)
         toggleAimbot()
     elseif input.KeyCode == flyToggleKey then
         toggleFly()
-    elseif input.KeyCode == fovSliderKey then
-        sliderBackground.Visible = not sliderBackground.Visible
     end
 end)
