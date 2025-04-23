@@ -104,15 +104,26 @@ UIS.InputBegan:Connect(function(input)
 end)
 
 -- Aimbot Logic
-local function getClosestPlayerToCursor()
+local function getTargetUnderCursor()
 	local closest, shortest = nil, math.huge
 	for _, player in pairs(Players:GetPlayers()) do
 		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
-			local pos, onScreen = Camera:WorldToViewportPoint(player.Character.Head.Position)
-			local dist = (Vector2.new(pos.X, pos.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
-			if onScreen and dist < shortest and dist <= fovSize then
-				shortest = dist
-				closest = player
+			local head = player.Character.Head
+			local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
+			local mousePos = Vector2.new(Mouse.X, Mouse.Y)
+			local part = Camera:ViewportPointToRay(Mouse.X, Mouse.Y, 0)
+			local raycastParams = RaycastParams.new()
+			raycastParams.FilterDescendantsInstances = {LocalPlayer.Character}
+			raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+			raycastParams.IgnoreWater = true
+
+			local result = workspace:Raycast(part.Origin, part.Direction * 1000, raycastParams)
+			if result and result.Instance and player.Character:IsAncestorOf(result.Instance) then
+				local dist = (Vector2.new(pos.X, pos.Y) - mousePos).Magnitude
+				if onScreen and dist < shortest and dist <= fovSize then
+					shortest = dist
+					closest = player
+				end
 			end
 		end
 	end
@@ -124,9 +135,9 @@ RunService.RenderStepped:Connect(function()
 	Crosshair.From = Vector2.new(Mouse.X - 4, Mouse.Y)
 	Crosshair.To = Vector2.new(Mouse.X + 4, Mouse.Y)
 	Crosshair.Visible = aimbotEnabled
-	
+
 	if aimbotEnabled then
-		local target = getClosestPlayerToCursor()
+		local target = getTargetUnderCursor()
 		if target and target.Character and target.Character:FindFirstChild("Head") then
 			Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character.Head.Position)
 		end
