@@ -134,10 +134,45 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ESP Logic
+local espFolder = Instance.new("Folder", workspace)
+espFolder.Name = "ESPFolder"
+
+local function clearESP()
+	for _, obj in pairs(espFolder:GetChildren()) do
+		obj:Destroy()
+	end
+end
+
+local function createESP(player)
+	if player.Character and player.Character:FindFirstChild("Head") then
+		local head = player.Character.Head
+		local distance = math.floor((head.Position - Camera.CFrame.Position).Magnitude)
+		local hp = player.Character:FindFirstChild("Humanoid") and math.floor(player.Character.Humanoid.Health) or 0
+		local teamColor = player.Team and player.Team.TeamColor.Color or Color3.fromRGB(255, 255, 255)
+
+		local billboard = Instance.new("BillboardGui", espFolder)
+		billboard.Adornee = head
+		billboard.Size = UDim2.new(0, 200, 0, 50)
+		billboard.StudsOffset = Vector3.new(0, 2, 0)
+		billboard.AlwaysOnTop = true
+		billboard.Name = player.Name .. "_ESP"
+
+		local textLabel = Instance.new("TextLabel", billboard)
+		textLabel.Size = UDim2.new(1, 0, 1, 0)
+		textLabel.BackgroundTransparency = 1
+		textLabel.TextColor3 = teamColor
+		textLabel.TextStrokeTransparency = 0.5
+		textLabel.TextScaled = true
+		textLabel.Font = Enum.Font.SourceSansBold
+		textLabel.Text = string.format("%s\nHP: %d | %dm", player.Name, hp, distance)
+	end
+end
+
 local function updateESP()
+	clearESP()
 	for _, player in pairs(Players:GetPlayers()) do
 		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
-			-- Add your custom BillboardGui ESP here with distance, HP, etc.
+			createESP(player)
 		end
 	end
 end
